@@ -1,0 +1,34 @@
+name: Pilot Pipeline
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  pilot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          python -m spacy download en_core_web_sm
+      - name: Make pilot 50
+        run: python -c "import pandas as pd; pd.read_csv('input/business_list.csv', dtype=str, encoding='utf-8-sig', sep=None, engine='python').head(50).to_csv('input/pilot_50.csv', index=False)"
+      - name: Run pipeline
+        run: python run_pipeline.py --input input/pilot_50.csv --workers 3
+      - name: Print funnel
+        run: python review.py
+      - name: Make dork list
+        run: python make_dorks.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pilot-results
+          path: |
+            output/candidates.csv
+            output/dorks.csv
+          retention-days: 7
