@@ -35,19 +35,26 @@ def process_site(name, website):
         observed = extract_emails(pages)
         lead.mx_valid = check_mx(lead.domain)
 
+        # শুধু টাইটেল-সহ ব্যক্তিই বিশ্বাসযোগ্য (ভুয়া নাম বাদ)
         people = extract_decision_makers(pages)
-        person = next((p for p in people if p["title"] != "unknown"), None) or (people[0] if people else None)
+        person = next((p for p in people if p["title"] != "unknown"), None)
         if person:
             lead.person_name, lead.person_title = person["name"], person["title"]
 
-        best = None
+        # LinkedIn: ৭৫+ = qualified, ৬৫+ = NEEDS_REVIEW (ম্যানুয়াল চেক)
+        best, review = None, None
         for cand in find_linkedin_candidates(name, lead.domain):
             sc, ev, ok = score_candidate(name, lead.domain, lead.person_name, cand["snippet"], cand["url"])
             if ok and (best is None or sc > best[0]):
                 best = (sc, ev, cand["url"])
+            elif not ok and sc >= 65 and (review is None or sc > review[0]):
+                review = (sc, ev + ["NEEDS_REVIEW"], cand["url"])
         if best:
             lead.linkedin_match_score, lead.linkedin_match_evidence, lead.linkedin_url = best
+        elif review:
+            lead.linkedin_match_score, lead.linkedin_match_evidence, lead.linkedin_url = review
 
+        # ইমেইল: আগে সাইট থেকে পাওয়া নিজস্ব মেইল, নাহলে pattern (শুধু trusted person-এর জন্য)
         own = [e for e in observed if e.endswith("@" + lead.domain)]
         if own:
             lead.email, lead.email_source, lead.email_candidates = own[0], "website_scrape", own
