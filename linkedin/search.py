@@ -17,7 +17,7 @@ def find_linkedin_candidates(company_name, domain, max_results=3, sleep_sec=2.0)
     for q in queries:
         try:
             with DDGS() as ddgs:
-                for r in ddgs.text(q, max_results=max_results):
+                for r in ddgs.text(q, max_results=max_results, backend="google,brave,duckduckgo"):
                     href = r.get("href", "")
                     if "linkedin.com/in/" in href and href not in seen:
                         seen.add(href)
