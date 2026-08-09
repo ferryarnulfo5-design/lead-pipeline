@@ -11,6 +11,15 @@ except OSError:
 TITLES = ["CEO", "Chief Executive Officer", "Founder", "Co-Founder", "Owner",
           "President", "Managing Director", "General Manager", "Principal"]
 
+BAD_WORDS = {"dfw", "dallas", "texas", "metroplex", "schedule", "quiz", "deposit",
+             "structure", "articles", "foundation", "repair", "construction",
+             "concrete", "llc", "inc", "the", "of", "and", "pros", "experts", "specialists"}
+
+def _sane_name(name):
+    words = name.split()
+    return (len(words) == 2 and all(w[0].isupper() for w in words)
+            and not any(w.lower() in BAD_WORDS for w in words))
+
 def extract_decision_makers(pages: list, max_people: int = 5) -> list:
     if nlp is None:
         return []
@@ -23,6 +32,8 @@ def extract_decision_makers(pages: list, max_people: int = 5) -> list:
             if ent.label_ != "PERSON" or len(ent.text.split()) < 2:
                 continue
             name = " ".join(ent.text.split())
+            if not _sane_name(name):
+                continue
             window = text[max(0, ent.start_char - 60): ent.end_char + 60].lower()
             title = next((t for t in TITLES if t.lower() in window), None)
             if name not in people:
